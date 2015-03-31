@@ -1,0 +1,157 @@
+C51 COMPILER V9.52.0.0   DS1302                                                            10/08/2014 10:47:02 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE DS1302
+OBJECT MODULE PLACED IN DS1302.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE DS1302.C LARGE BROWSE DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          #include <stc\stc15f2k60s2.h>
+   2          #include "delay.h"
+   3          #include "DS1302.h"
+   4          
+   5                                        //秒    分    时    日    月  星期    年
+   6          unsigned char code init[] = {0x00, 0x00, 0x12, 0x20, 0x08, 0x03, 0x14};
+   7          signed char  now[7];
+   8          
+   9          
+  10          /**************************************
+  11          从DS1302读1字节数据
+  12          **************************************/
+  13          unsigned char DS1302_ReadByte()
+  14          {
+  15   1          unsigned char i;
+  16   1          unsigned char dat = 0;
+  17   1      
+  18   1          for (i=0; i<8; i++)             //8位计数器
+  19   1          {
+  20   2          DS1302_SCLK = 0;                   //时钟线拉低
+  21   2          delay_us(2);                //延时等待
+  22   2              dat >>= 1;                  //数据右移一位
+  23   2          if (DS1302_IO) dat |= 0x80;        //读取数据
+  24   2          DS1302_SCLK = 1;                   //时钟线拉高
+  25   2          delay_us(2);                //延时等待
+  26   2        }
+  27   1      
+  28   1          return dat;
+  29   1      }
+  30          
+  31          /**************************************
+  32          向DS1302写1字节数据
+  33          **************************************/
+  34          void DS1302_WriteByte(unsigned char dat)
+  35          {
+  36   1          char i;
+  37   1      
+  38   1          for (i=0; i<8; i++)             //8位计数器
+  39   1          {
+  40   2              DS1302_SCLK = 0;                   //时钟线拉低
+  41   2              delay_us(2);                //延时等待
+  42   2              dat >>= 1;                  //移出数据
+  43   2              DS1302_IO = CY;                    //送出到端口
+  44   2              DS1302_SCLK = 1;                   //时钟线拉高
+  45   2              delay_us(2);                //延时等待
+  46   2          }
+  47   1      }
+  48          
+  49          /**************************************
+  50          读DS1302某地址的的数据
+  51          **************************************/
+  52          unsigned char DS1302_ReadData(unsigned char addr)
+  53          {
+  54   1          unsigned char dat;
+  55   1      
+C51 COMPILER V9.52.0.0   DS1302                                                            10/08/2014 10:47:02 PAGE 2   
+
+  56   1          DS1302_RST = 0;
+  57   1          delay_us(2);
+  58   1          DS1302_SCLK = 0;
+  59   1          delay_us(2);
+  60   1          DS1302_RST = 1;
+  61   1          delay_us(2);
+  62   1          DS1302_WriteByte(addr);         //写地址
+  63   1          dat = DS1302_ReadByte();        //读数据
+  64   1          DS1302_SCLK = 1;
+  65   1          DS1302_RST = 0;
+  66   1      
+  67   1          return dat;
+  68   1      }
+  69          
+  70          /**************************************
+  71          往DS1302的某个地址写入数据
+  72          **************************************/
+  73          void DS1302_WriteData(unsigned char addr, unsigned char dat)
+  74          {
+  75   1          DS1302_RST = 0;
+  76   1          delay_us(2);
+  77   1          DS1302_SCLK = 0;
+  78   1          delay_us(2);
+  79   1          DS1302_RST = 1;
+  80   1          delay_us(2);
+  81   1          DS1302_WriteByte(addr);         //写地址
+  82   1          DS1302_WriteByte(dat);          //写数据
+  83   1          DS1302_SCLK = 1;
+  84   1          DS1302_RST = 0;
+  85   1      }
+  86          
+  87          /**************************************
+  88          写入初始时间
+  89          **************************************/
+  90          void DS1302_SetTime(unsigned char *p)
+  91          {
+  92   1          unsigned char addr = 0x80;
+  93   1          unsigned char n = 7;
+  94   1      
+  95   1          DS1302_WriteData(0x8e, 0x00);   //允许写操作
+  96   1          while (n--)
+  97   1          {
+  98   2              DS1302_WriteData(addr, *p++);
+  99   2              addr += 2;
+ 100   2          }
+ 101   1          DS1302_WriteData(0x8e, 0x80);   //写保护
+ 102   1      }
+ 103          
+ 104          /**************************************
+ 105          读取当前时间
+ 106          **************************************/
+ 107          void DS1302_GetTime(unsigned char *p)
+ 108          {
+ 109   1          unsigned char addr = 0x81;
+ 110   1          unsigned char n = 7;
+ 111   1      
+ 112   1          while (n--)
+ 113   1          {
+ 114   2              *p++ = DS1302_ReadData(addr);
+ 115   2              addr += 2;
+ 116   2          }
+ 117   1      }
+C51 COMPILER V9.52.0.0   DS1302                                                            10/08/2014 10:47:02 PAGE 3   
+
+ 118          
+ 119          /**************************************
+ 120          初始化DS1302
+ 121          **************************************/
+ 122          void DS1302_Initial()
+ 123          {
+ 124   1          DS1302_RST = 0;
+ 125   1          DS1302_SCLK = 0;
+ 126   1          DS1302_WriteData(0x8e, 0x00);   //允许写操作
+ 127   1          DS1302_WriteData(0x80, 0x00);   //时钟启动
+ 128   1          DS1302_WriteData(0x90, 0xa6);   //一个二极管＋4K电阻充电
+ 129   1          DS1302_WriteData(0x8e, 0x80);   //写保护
+ 130   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    392    ----
+   CONSTANT SIZE    =      7    ----
+   XDATA SIZE       =      7      17
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,147 @@
+C51 COMPILER V9.52.0.0   SCCB                                                              10/08/2014 10:47:03 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE SCCB
+OBJECT MODULE PLACED IN sccb.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE sccb.c LARGE BROWSE DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          
+   2          #include "sccb.h"
+   3          #include "delay.h"
+   4          #include <stc\stc15f2k60s2.h>
+   5          
+   6          #define SCCB_SDA  P00
+   7          #define SCCB_SCL  P01
+   8          
+   9          #define CLOCK_LOW()         (SCCB_SCL = 0) 
+  10          #define CLOCK_HIGH()        (SCCB_SCL = 1)    
+  11          #define DATA_LOW()          (SCCB_SDA = 0)    
+  12          #define DATA_HIGH()         (SCCB_SDA = 1)      
+  13          
+  14          
+  15          void sccb_start(void)
+  16          {
+  17   1          CLOCK_HIGH();
+  18   1          DATA_HIGH();
+  19   1          delay_us(1);
+  20   1          DATA_LOW();
+  21   1          delay_us(1);
+  22   1          CLOCK_LOW();
+  23   1          delay_us(1);
+  24   1      }
+  25            
+  26          void sccb_end(void) 
+  27          {
+  28   1           DATA_LOW();
+  29   1           delay_us(1);
+  30   1           CLOCK_HIGH();
+  31   1           delay_us(1);
+  32   1           DATA_HIGH();
+  33   1           delay_us(1);  
+  34   1      }
+  35          
+  36          void sccb_sendbyte( unsigned char value )
+  37          {
+  38   1           unsigned char  i=0;  //并行数据转串行输出，串行数据输出的顺序为先高位再低位
+  39   1             
+  40   1           for(i=0;i<8;i++)
+  41   1           {
+  42   2                if( value & 0x80 )
+  43   2                      DATA_HIGH();
+  44   2                else
+  45   2                      DATA_LOW();
+  46   2                          
+  47   2                 delay_us(1);
+  48   2                 CLOCK_HIGH();
+  49   2                 delay_us(1);
+  50   2                 CLOCK_LOW();
+  51   2                 delay_us(1);
+  52   2                 DATA_LOW();
+  53   2                 delay_us(1);
+  54   2                   
+  55   2                 value<<=1; 
+C51 COMPILER V9.52.0.0   SCCB                                                              10/08/2014 10:47:03 PAGE 2   
+
+  56   2             }
+  57   1            
+  58   1                                         //第9位，Don’t Care
+  59   1             DATA_HIGH(); 
+  60   1             delay_us(1);
+  61   1             CLOCK_HIGH(); 
+  62   1             delay_us(1);
+  63   1             CLOCK_LOW();
+  64   1             delay_us(1);      
+  65   1      }
+  66          
+  67          
+  68          void sccb_receivebyte(unsigned char *value) 
+  69          {
+  70   1             int i=0;
+  71   1             int svalue=0;
+  72   1             int pvalue = 0;
+  73   1             //串行数据转并行输入，高位在前
+  74   1             for(i=7;i>=0;i--)
+  75   1             {
+  76   2                    CLOCK_HIGH();
+  77   2                    delay_us(1);
+  78   2                    svalue= SCCB_SDA;
+  79   2                    CLOCK_LOW();
+  80   2                    delay_us(1);
+  81   2                    pvalue |= svalue<<i;
+  82   2             }
+  83   1             DATA_HIGH();
+  84   1             delay_us(1);
+  85   1             CLOCK_HIGH();
+  86   1             delay_us(1);
+  87   1             CLOCK_LOW();
+  88   1             delay_us(1); 
+  89   1             *value = (unsigned char)(pvalue & 0xff);   
+  90   1      }
+  91          
+  92          void sccb_senddata(unsigned char subaddr,unsigned char value) 
+  93          {
+  94   1       //3相写传输周期
+  95   1             sccb_start();                             //启动SCCB
+  96   1             sccb_sendbyte(0x42);                //OV7670设备从地址，写操作
+  97   1             sccb_sendbyte(subaddr);            //设备内存地址
+  98   1             sccb_sendbyte(value);                 //写数据字节
+  99   1             sccb_end();                              //结束SCCB     
+ 100   1             delay_us(10);  
+ 101   1      }
+ 102          unsigned char sccb_receivedata(unsigned char subaddr)
+ 103          {
+ 104   1       unsigned char temp;
+ 105   1            
+ 106   1             //2相写传输周期
+ 107   1             sccb_start();                             //启动SCCB
+ 108   1             sccb_sendbyte(0x42);               //OV7670设备从地址，写操作
+ 109   1             sccb_sendbyte(subaddr);            //设备内存地址
+ 110   1             sccb_end();                              //结束SCCB
+ 111   1            
+ 112   1             //2相读传输周期
+ 113   1             sccb_start();                             //启动SCCB
+ 114   1             sccb_sendbyte(0x43);                //OV7670设备从地址，读操作
+ 115   1             sccb_receivebyte(&temp);         //读字节
+ 116   1             sccb_end();                              //结束SCCB
+ 117   1             return temp;   
+C51 COMPILER V9.52.0.0   SCCB                                                              10/08/2014 10:47:03 PAGE 3   
+
+ 118   1        
+ 119   1      }
+ 120          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    415    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----      15
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

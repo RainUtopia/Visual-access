@@ -1,0 +1,14 @@
+"STARTUP.obj",
+"12864.obj",
+"delay.obj",
+"DS1302.obj",
+"main.obj",
+"menu.obj",
+"uart.obj",
+"fifo.obj",
+"NRF24L01.obj",
+"OV7670.obj",
+"sccb.obj",
+"net_camera.obj" 
+TO "12864" 
+RAMSIZE(256) 

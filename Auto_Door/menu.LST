@@ -1,0 +1,414 @@
+C51 COMPILER V9.52.0.0   MENU                                                              10/08/2014 10:47:02 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE MENU
+OBJECT MODULE PLACED IN menu.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE menu.c LARGE BROWSE DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          #include <stc\stc15f2k60s2.h>
+   2          #include "12864.h"
+   3          #include "DS1302.h"
+   4          #include "delay.h"
+   5          #include "menu.h"
+   6          #include  "net_camera.h"
+   7          #include  "NRF24L01.H"
+   8          
+   9          unsigned char key;
+  10          
+  11          unsigned char keyscan()
+  12          {
+  13   1        unsigned char temp=0;
+  14   1        P3 = P3 | 0x78;
+  15   1        delay_us(1);
+  16   1        if(P3 !=  0x78)
+  17   1        {
+  18   2          delay_ms(10);
+  19   2          if(P3 !=  0x78)
+  20   2          {
+  21   3            if(P33  == 0)       while(0x78!=(P3&0x78))  temp=K1;
+  22   3            else  if(P34  == 0) while(0x78!=(P3&0x78))  temp=K2;
+  23   3            else  if(P35  == 0) while(0x78!=(P3&0x78))  temp=K3;
+  24   3            else  if(P36  == 0) while(0x78!=(P3&0x78))  temp=K4;
+  25   3          }
+  26   2        }
+  27   1        return  temp;
+  28   1      }
+  29          
+  30          struct  MenuItem code Find[7];
+  31          
+  32          void  NullSubs(void)  {}
+  33          //目录结构体定义
+  34          struct  MenuItem                           //结构体名称
+  35          {     unsigned char   MenuCount;         //当前层节点数、每层菜单能显示的条目数
+  36                unsigned char   *DisplayString;    //指向菜单标题的字符串
+  37                unsigned char   (*Subs)();         //指向当前状态应该执行的功能函数
+  38                struct MenuItem   *ChildrenMenus;//指向当前菜单的下级菜单
+  39                struct MenuItem   *ParentMenus;  //指向当前菜单的上级菜单
+  40          }   Null;
+  41          
+  42          
+  43          
+  44          unsigned char code  office[7]=  //办公室成员频道
+  45          {64,65,66,67,68,69,70};
+  46          
+  47          struct  MenuItem code   MainMenu[3] =      //结构体主菜单
+  48          {
+  49              {3,"  找人  ",&NullSubs,&Find, &Null},  
+  50              {3,"调整时间",&time_change,&Null, &Null}, 
+  51              {3,"调整日期",&date_change,&Null, &Null}, 
+  52          //    {5,"串口传图",&Nrf24L01_Camera_Test,&Null, &Null},
+  53          //    {5,"无线传图",&Nrf24L01_Camera,&Null,&Null},  
+  54          };
+  55          
+C51 COMPILER V9.52.0.0   MENU                                                              10/08/2014 10:47:02 PAGE 2   
+
+  56          struct  MenuItem  code  Find[7] = 
+  57          {
+  58          {7,"王清珍",&person_ui,&Null,&MainMenu},
+  59          {7,"王玉萍",&person_ui,&Null,&MainMenu},
+  60          {7,"曾毅",&person_ui,&Null,&MainMenu},
+  61          {7,"牛庆丽",&person_ui,&Null,&MainMenu},
+  62          {7,"鞠杰",&person_ui,&Null,&MainMenu},
+  63          {7,"李胜辉",&person_ui,&Null,&MainMenu},
+  64          {7,"黄于欣",&person_ui,&Null,&MainMenu},
+  65          };
+  66          void person_ui(void)
+  67          {
+  68   1        unsigned char rx_temp[32];
+  69   1      
+  70   1        lcd_msg("连接");
+  71   1        lcd_disp_string(MenuPoint[UserChoose].DisplayString);
+  72   1        lcd_set_xy(2,3);
+  73   1        lcd_disp_number(office[UserChoose]/100);
+  74   1        lcd_disp_number(office[UserChoose]%100/10);
+  75   1        lcd_disp_number(office[UserChoose]%10);
+  76   1        lcd_disp_string("CH");
+  77   1        NRF24L01_Change_Ch(office[UserChoose]);
+  78   1        rx_temp[0]='h';
+  79   1        NRF24L01_SendFrame(&rx_temp,1);
+  80   1        delay_ms(500);
+  81   1          if(camera)  { Nrf24L01_Camera();  camera=0;}
+  82   1          else  { lcd_msg("连接失败");  lcd_set_xy(2,0);  lcd_disp_string("请以其他方式联系");  delay_ms(3000);}
+  83   1      
+  84   1      }
+  85          struct  MenuItem (*MenuPoint) = MainMenu; 
+  86          signed char   DisplayStart  = 0;             //显示菜单的开始位置   
+  87          signed char   UserChoose    = 0;           //用户的选择
+  88          signed char   DisplayStart_Old  = 0;       //保存菜单的开始位置  
+  89          signed char   UserChoose_Old      = 0;     //保存用户的菜单编号
+  90          signed char   MaxItems      = 0;          //菜单的数量
+  91          #define   LCD_MAX_DISP_LINES    4           //屏幕最多显示条目数
+  92          //显示函数
+  93          void  ShowMenu(void)
+  94          {
+  95   1          unsigned char   DisplayPoint  = 0;           //显示菜单的编号
+  96   1          unsigned char i = 0;
+  97   1          clr_Scr();      //清屏
+  98   1          MaxItems = MenuPoint[0].MenuCount;        //获取当前菜单的条目数
+  99   1          DisplayPoint = DisplayStart;
+ 100   1          if(MaxItems >= LCD_MAX_DISP_LINES)
+ 101   1          {
+ 102   2            for (i = 0;i < LCD_MAX_DISP_LINES;i++)
+ 103   2            {
+ 104   3                lcd_set_xy(i,1);
+ 105   3                if ((DisplayPoint) == (UserChoose))
+ 106   3                  {
+ 107   4                    lcd_disp_string("\XA1\XFA");    //写小箭头
+ 108   4                  }
+ 109   3                else
+ 110   3                  {
+ 111   4                    lcd_disp_string("  ");    //写空格
+ 112   4                  }
+ 113   3                  lcd_disp_string(MenuPoint[DisplayPoint].DisplayString);
+ 114   3                DisplayPoint += 1;  //字符串偏移量+1
+ 115   3                if ((DisplayPoint) == (MaxItems))
+ 116   3                  {
+ 117   4                    DisplayPoint = 0;
+C51 COMPILER V9.52.0.0   MENU                                                              10/08/2014 10:47:02 PAGE 3   
+
+ 118   4                  }
+ 119   3            }
+ 120   2          }
+ 121   1          else
+ 122   1          {
+ 123   2            for (i = 0;i < MaxItems;i++)
+ 124   2            {
+ 125   3                lcd_set_xy(i,1);
+ 126   3                if ((DisplayPoint) == (UserChoose))
+ 127   3                  {
+ 128   4                    lcd_disp_string("\XA1\XFA");    //写小箭头
+ 129   4                  }
+ 130   3                else
+ 131   3                  {
+ 132   4                    lcd_disp_string("  ");    //写空格
+ 133   4                  }
+ 134   3                  lcd_disp_string(MenuPoint[DisplayPoint].DisplayString);
+ 135   3                DisplayPoint += 1;  //字符串偏移量+1
+ 136   3                if ((DisplayPoint) == (MaxItems))
+ 137   3                  {
+ 138   4                    DisplayPoint = 0;
+ 139   4                  }
+ 140   3           }
+ 141   2         }
+ 142   1      
+ 143   1      }
+ 144          
+ 145          //--------------------------------------------------
+ 146          // [按键说明] *
+ 147          // ----------------------------------- *
+ 148          // [K1] KEY_ENTER(确定) *
+ 149          // [K2] KEY_DOWN(向上)  *
+ 150          // [K3] KEY_UP(向下)    *
+ 151          // [K4] KEY_ESC(后退)   *
+ 152          //---------------------------------------------------/
+ 153          void Key_Menu(unsigned char KeyNum)
+ 154          {
+ 155   1        if (KeyNum != 0)
+ 156   1        {
+ 157   2          MaxItems = MenuPoint[0].MenuCount;        //获取当前菜单的条目数
+ 158   2          switch (KeyNum)
+ 159   2          {
+ 160   3          case K2:
+ 161   3            UserChoose --;  
+ 162   3            if (UserChoose < 0)
+ 163   3            {
+ 164   4              UserChoose = MaxItems-1;
+ 165   4            }
+ 166   3            break;
+ 167   3          case K4:
+ 168   3            if (MenuPoint[0].ParentMenus != &Null)
+ 169   3            {
+ 170   4              MenuPoint = MenuPoint[0].ParentMenus;
+ 171   4              //恢复到之前的选择菜单
+ 172   4              UserChoose = UserChoose_Old;
+ 173   4              DisplayStart = DisplayStart_Old;
+ 174   4            }
+ 175   3            break;
+ 176   3          case K3:
+ 177   3            UserChoose ++;
+ 178   3            if (UserChoose >= MaxItems)
+ 179   3            {
+C51 COMPILER V9.52.0.0   MENU                                                              10/08/2014 10:47:02 PAGE 4   
+
+ 180   4              UserChoose = 0;
+ 181   4            }
+ 182   3            break;
+ 183   3          case K1:
+ 184   3            if (MenuPoint[UserChoose].Subs != NullSubs) //如果操作函数不为空，运行操作函数
+ 185   3            {
+ 186   4              (*MenuPoint[UserChoose].Subs)();
+ 187   4            }
+ 188   3            if (MenuPoint[UserChoose].ChildrenMenus != &Null) //如果操作函数不为空并且子菜单不为空，则进行菜单切换
+ 189   3            {
+ 190   4                MenuPoint = MenuPoint[UserChoose].ChildrenMenus;
+ 191   4                DisplayStart_Old = DisplayStart;
+ 192   4                UserChoose_Old = UserChoose;
+ 193   4                UserChoose = 0;
+ 194   4                DisplayStart = 0;
+ 195   4            }
+ 196   3            break;
+ 197   3            default:  break;
+ 198   3          }
+ 199   2      
+ 200   2          if ( (UserChoose > (DisplayStart+(LCD_MAX_DISP_LINES-1))) )
+ 201   2          {//菜单翻页
+ 202   3            DisplayStart = UserChoose;
+ 203   3          }
+ 204   2          if( ((UserChoose + MaxItems - DisplayStart) > (LCD_MAX_DISP_LINES-1)) && (DisplayStart > UserChoose) )
+ 205   2          {//菜单翻页
+ 206   3            DisplayStart = UserChoose;
+ 207   3          }
+ 208   2          ShowMenu();
+ 209   2        }
+ 210   1      }
+ 211          //菜单入口
+ 212          void gui(void)
+ 213          {
+ 214   1        ShowMenu();
+ 215   1          while(1)
+ 216   1          {
+ 217   2          key=keyscan();
+ 218   2          if (MenuPoint[0].ParentMenus == &Null)
+ 219   2            if(key==K4) break;    //当前为主菜单且按下返回键时退出菜单
+ 220   2          
+ 221   2        if(come)  {lcd_msg("  请进! "); come=0; delay_ms(3000); key=0xff;}
+ 222   2        if(wait)  {lcd_msg("  请稍等"); wait=0; delay_ms(3000); key=0xff;}
+ 223   2        if(overlook)  {lcd_msg("对方忙绿"); overlook=0; delay_ms(3000); key=0xff;}
+ 224   2          Key_Menu(key);
+ 225   2         
+ 226   2          }
+ 227   1      }
+ 228          void time_view(signed char point)
+ 229          {
+ 230   1        clr_Scr();      //清屏
+ 231   1        lcd_set_xy(0,2);
+ 232   1        lcd_disp_string("时间设置");
+ 233   1        lcd_set_xy(2,1);
+ 234   1        lcd_disp_number(now[2]/10);
+ 235   1        lcd_disp_number(now[2]%10);
+ 236   1        lcd_disp_string(": ");
+ 237   1        lcd_disp_number(now[1]/10);
+ 238   1        lcd_disp_number(now[1]%10);
+ 239   1        lcd_disp_string(": ");
+ 240   1        lcd_disp_number(now[0]/10);
+ 241   1        lcd_disp_number(now[0]%10);
+C51 COMPILER V9.52.0.0   MENU                                                              10/08/2014 10:47:02 PAGE 5   
+
+ 242   1        if(point==0)  lcd_set_xy(2,1);
+ 243   1        else  if(point==1)  lcd_set_xy(2,3);
+ 244   1      }
+ 245          //时间调节函数
+ 246          void time_change(void)
+ 247          {
+ 248   1        signed char point=0,key=0;
+ 249   1        DS1302_GetTime(now);
+ 250   1        now[0]=0;   //秒清零
+ 251   1        write_com(0x0f);  //开游标显示
+ 252   1        now[1]=(now[1]/16*10+now[1]%16);
+ 253   1        now[2]=(now[2]/16*10+now[2]%16);
+ 254   1        time_view(point);
+ 255   1        while(1)
+ 256   1        {
+ 257   2        key=keyscan();
+ 258   2        if(K1==key) 
+ 259   2          {
+ 260   3            point++;
+ 261   3            if(point==2)  
+ 262   3            {
+ 263   4              write_com(0x0c);
+ 264   4              now[1]=(now[1]/10*16+now[1]%10);
+ 265   4              now[2]=(now[2]/10*16+now[2]%10);
+ 266   4              DS1302_SetTime(now);
+ 267   4              break;
+ 268   4            }
+ 269   3          }
+ 270   2        if(K2==key) 
+ 271   2          {
+ 272   3            if(point==0)  now[2]++;
+ 273   3            if(point==1)  now[1]++;
+ 274   3          }
+ 275   2        if(K3==key) 
+ 276   2          {
+ 277   3            if(point==0)  now[2]--;
+ 278   3            if(point==1)  now[1]--;
+ 279   3          }
+ 280   2        if(K4==key) 
+ 281   2          {
+ 282   3            write_com(0x0c);
+ 283   3            break;
+ 284   3          }
+ 285   2        if(now[1]>59) now[1]=0;
+ 286   2        if(now[1]<0)  now[1]=59;
+ 287   2        if(now[2]>23) now[2]=0;
+ 288   2        if(now[2]<0)  now[2]=23;
+ 289   2        if(key!=0)  time_view(point);
+ 290   2        }
+ 291   1      }
+ 292          
+ 293          void date_view(signed char point)
+ 294          {
+ 295   1        clr_Scr();      //清屏
+ 296   1        lcd_set_xy(0,2);
+ 297   1        lcd_disp_string("日期设置");
+ 298   1        lcd_set_xy(2,1);
+ 299   1        lcd_disp_number(2);
+ 300   1        lcd_disp_number(0);
+ 301   1        lcd_disp_number(now[6]/10);
+ 302   1        lcd_disp_number(now[6]%10);
+ 303   1        lcd_disp_string("年");
+C51 COMPILER V9.52.0.0   MENU                                                              10/08/2014 10:47:02 PAGE 6   
+
+ 304   1        lcd_disp_number(now[4]/10);
+ 305   1        lcd_disp_number(now[4]%10);
+ 306   1        lcd_disp_string("月");
+ 307   1        lcd_disp_number(now[3]/10);
+ 308   1        lcd_disp_number(now[3]%10);
+ 309   1        if(point==0)  lcd_set_xy(2,2);
+ 310   1        else  if(point==1)  lcd_set_xy(2,4);
+ 311   1        else  if(point==2)  lcd_set_xy(2,6);
+ 312   1      }
+ 313          //日期调节函数
+ 314          void date_change(void)
+ 315          {
+ 316   1        signed char point=0,key=0;
+ 317   1        signed char temp[7];
+ 318   1        DS1302_GetTime(now);
+ 319   1        write_com(0x0f);  //开游标显示
+ 320   1        now[3]=(now[3]/16*10+now[3]%16);
+ 321   1        now[4]=(now[4]/16*10+now[4]%16);
+ 322   1        now[6]=(now[6]/16*10+now[6]%16);
+ 323   1        date_view(point);
+ 324   1        while(1)
+ 325   1        {
+ 326   2        key=keyscan();
+ 327   2        if(K1==key) 
+ 328   2          {
+ 329   3            point++;
+ 330   3            if(point==3)  
+ 331   3            {
+ 332   4              write_com(0x0c);
+ 333   4               if (now[4]==1 || now[4]==2)
+ 334   4                 {
+ 335   5                   now[4]+=12;
+ 336   5                   now[6]--;
+ 337   5                }
+ 338   4              now[5]=(now[3]+1+2*now[4] + 3*(now[4]+1)/5 + now[6] + now[6]/4 - now[6]/100 + now[6]/400)%7;
+ 339   4              now[3]=(now[3]/10*16+now[3]%10);
+ 340   4              now[4]=(now[4]/10*16+now[4]%10);
+ 341   4              now[6]=(now[6]/10*16+now[6]%10);
+ 342   4              now[5]=(now[5]/10*16+now[5]%10);
+ 343   4              DS1302_GetTime(temp);
+ 344   4              temp[3]=now[3];
+ 345   4              temp[4]=now[4];
+ 346   4              temp[5]=now[5];
+ 347   4              temp[6]=now[6];
+ 348   4              DS1302_SetTime(temp);
+ 349   4              break;
+ 350   4            }
+ 351   3          }
+ 352   2        if(K2==key) 
+ 353   2          {
+ 354   3            if(point==0)  now[6]++;
+ 355   3            if(point==1)  now[4]++;
+ 356   3            if(point==2)  now[3]++;
+ 357   3          }
+ 358   2        if(K3==key) 
+ 359   2          {
+ 360   3            if(point==0)  now[6]--;
+ 361   3            if(point==1)  now[4]--;
+ 362   3            if(point==2)  now[3]--;
+ 363   3          }
+ 364   2        if(K4==key) 
+ 365   2          {
+C51 COMPILER V9.52.0.0   MENU                                                              10/08/2014 10:47:02 PAGE 7   
+
+ 366   3            write_com(0x0c);
+ 367   3            break;
+ 368   3          }
+ 369   2        if(now[6]>99) now[6]=0;
+ 370   2        if(now[6]<0)  now[6]=99;
+ 371   2        if(now[4]>12) now[4]=1;
+ 372   2        if(now[4]<1)  now[4]=12;
+ 373   2        if(now[3]>31) now[3]=1;
+ 374   2        if(now[3]<1)  now[3]=31;
+ 375   2        if(key!=0)  date_view(point);
+ 376   2        }
+ 377   1      }
+ 378          
+ 379          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2655    ----
+   CONSTANT SIZE    =    303    ----
+   XDATA SIZE       =     22      48
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

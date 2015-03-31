@@ -1,0 +1,100 @@
+C51 COMPILER V9.52.0.0   MAIN                                                              10/08/2014 10:47:02 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE main.c LARGE BROWSE DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          #include <stc\stc15f2k60s2.h>
+   2          #include "delay.h"
+   3          #include "12864.h"
+   4          #include "DS1302.h"
+   5          #include "menu.h"
+   6          #include "uart.h"
+   7          #include "sccb.h"
+   8          #include "fifo.h"
+   9          #include "OV7670.h"
+  10          #include  "NRF24L01.H"
+  11          #include  "net_camera.h"
+  12          
+  13          void sys_ui(void);  //待机界面
+  14          
+  15          void Main()
+  16          {
+  17   1        lcdinit();
+  18   1        lcd_msg("时钟初始化");
+  19   1        delay_ms(300);
+  20   1        DS1302_Initial();
+  21   1        DS1302_SetTime(init);
+  22   1        InitUART();
+  23   1        lcd_msg("摄像头初始化");
+  24   1        delay_ms(300);
+  25   1        OV7670_Init();
+  26   1        FIFO_Init();
+  27   1        FIFO_sav();   //如果摄像头工作不正常,程序停留在这里
+  28   1        lcd_msg("通信初始化");
+  29   1        delay_ms(300);
+  30   1        NRF24L01_Init();
+  31   1        NRF24L01_Check();
+  32   1        while(0 == (NRF24L01_FLAG & NRF24L01_CHECK));
+  33   1        while(1)
+  34   1        {
+  35   2          sys_ui();
+  36   2          key=keyscan();
+  37   2          if(key==K1) gui();
+  38   2        if(come)  {lcd_msg("  请进! "); come=0; delay_ms(3000);}
+  39   2         if(wait) {lcd_msg("  请稍等"); wait=0; delay_ms(3000);}
+  40   2         if(overlook) {lcd_msg("对方忙绿"); overlook=0; delay_ms(3000);}
+  41   2        }
+  42   1      }
+  43          
+  44          void sys_ui(void)
+  45          {
+  46   1        DS1302_GetTime(now);
+  47   1        lcd_set_xy(0,0);
+  48   1        lcd_disp_string("  郑州科技学院  ");
+  49   1        lcd_set_xy(1,0);
+  50   1        lcd_disp_string("20");
+  51   1        lcd_disp_number(now[6]>>4);
+  52   1        lcd_disp_number(now[6]%16);
+  53   1        lcd_disp_string("/");
+  54   1        lcd_disp_number(now[4]>>4);
+  55   1        lcd_disp_number(now[4]%16);
+C51 COMPILER V9.52.0.0   MAIN                                                              10/08/2014 10:47:02 PAGE 2   
+
+  56   1        lcd_disp_string("/");
+  57   1        lcd_disp_number(now[3]>>4);
+  58   1        lcd_disp_number(now[3]%16);
+  59   1        lcd_disp_string("星期");
+  60   1        lcd_disp_week(now[5]);
+  61   1        lcd_set_xy(2,0);
+  62   1        lcd_disp_string("    ");
+  63   1        lcd_disp_number(now[2]>>4);
+  64   1        lcd_disp_number(now[2]%16);
+  65   1        lcd_disp_string(":");
+  66   1        lcd_disp_number(now[1]>>4);
+  67   1        lcd_disp_number(now[1]%16);
+  68   1        lcd_disp_string(":");
+  69   1        lcd_disp_number(now[0]>>4);
+  70   1        lcd_disp_number(now[0]%16);
+  71   1        lcd_disp_string("    ");
+  72   1        lcd_set_xy(3,0);
+  73   1        lcd_disp_string("请按OK键进入菜单");
+  74   1      }
+  75            
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    496    ----
+   CONSTANT SIZE    =    113    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

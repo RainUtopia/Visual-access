@@ -1,0 +1,136 @@
+C51 COMPILER V9.52.0.0   12864                                                             10/08/2014 10:47:01 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE 12864
+OBJECT MODULE PLACED IN 12864.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE 12864.c LARGE BROWSE DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          /********************************************************************
+   2          串行12864显示
+   3          Fancy QQ:652774317
+   4          ***********************************************************************/
+   5          #include <stc\stc15f2k60s2.h>
+   6          #include "delay.h"
+   7          #include "12864.h"
+   8          
+   9          
+  10          //按照液晶的串口通信协议，发送数据
+  11          void sendbyte(unsigned char zdata)
+  12          {
+  13   1        unsigned int i;
+  14   1        for(i=0; i<8; i++)
+  15   1        {
+  16   2          if((zdata << i) & 0x80)
+  17   2          {
+  18   3            SID = 1;
+  19   3          }
+  20   2          else 
+  21   2          {
+  22   3            SID = 0;
+  23   3          }
+  24   2          SCLK = 0;
+  25   2          SCLK = 1;
+  26   2        }
+  27   1      }
+  28          
+  29          
+  30          //写串口指令
+  31          void write_com(unsigned char cmdcode)
+  32          {
+  33   1        CS = 1;
+  34   1        sendbyte(0xf8);
+  35   1        sendbyte(cmdcode & 0xf0);
+  36   1        sendbyte((cmdcode << 4) & 0xf0);
+  37   1        delay_us(200);
+  38   1      }
+  39          
+  40          //写串口数据
+  41          void write_data(unsigned char Dispdata)
+  42          {
+  43   1        CS = 1;
+  44   1        sendbyte(0xfa);
+  45   1        sendbyte(Dispdata & 0xf0);
+  46   1        sendbyte((Dispdata << 4) & 0xf0);
+  47   1        delay_us(200);
+  48   1      }
+  49          //清屏函数
+  50          void clr_Scr(void)
+  51          {
+  52   1        write_com(0x01);
+  53   1        delay_ms(2);
+  54   1      }
+  55          //lcd初始化
+C51 COMPILER V9.52.0.0   12864                                                             10/08/2014 10:47:01 PAGE 2   
+
+  56          void lcdinit()
+  57          {  
+  58   1        P47=1;
+  59   1        write_com(0x30);
+  60   1        delay_us(200);
+  61   1        write_com(0x0c);
+  62   1        delay_us(200);
+  63   1        clr_Scr();
+  64   1      }
+  65          
+  66          //设置起始地址函数,x表示行0-3,y表示列0-7
+  67          void lcd_set_xy( unsigned char x, unsigned char y )
+  68          { 
+  69   1          unsigned char address;
+  70   1        switch(x)
+  71   1        {
+  72   2          case 0: address = 0x80 + y; break; 
+  73   2          case 1: address = 0x90 + y; break; 
+  74   2          case 2: address = 0x88 + y; break;
+  75   2          case 3: address = 0x98 + y; break; 
+  76   2          default:address = 0x80 + y; break;
+  77   2        }
+  78   1        write_com(address);
+  79   1      }
+  80          // 字符串显示函数
+  81          void lcd_disp_string(unsigned char *str) //写入字符串
+  82          {
+  83   1      
+  84   1         while(*str)
+  85   1          {
+  86   2           write_data(*str);
+  87   2           str++;
+  88   2          }
+  89   1      }
+  90          //数字显示函数十六进制以下均可
+  91          void lcd_disp_number(unsigned char s)
+  92          { 
+  93   1        if(s<=9)  write_data(s+0x30);
+  94   1        else  write_data(s+0x37);
+  95   1      }
+  96          //显示消息框
+  97          void  lcd_msg(unsigned char *s)
+  98          {
+  99   1        clr_Scr();
+ 100   1        lcd_set_xy(1,1);
+ 101   1        lcd_disp_string(s);
+ 102   1      }
+ 103          //星期显示
+ 104          void  lcd_disp_week(unsigned char s)
+ 105          {
+ 106   1        unsigned char temp[14]={0XD2,0XBB,  0XB6,0XFE,  0XC8,0XFD,  0XCB,0XC4,  0XCE,0XE5,  0XC1,0XF9,  0XC8,0XD5};
+ 107   1        write_data(temp[(s-1)*2]);
+ 108   1        write_data(temp[(s-1)*2+1]);
+ 109   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    343    ----
+   CONSTANT SIZE    =     14    ----
+   XDATA SIZE       =   ----      23
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+C51 COMPILER V9.52.0.0   12864                                                             10/08/2014 10:47:01 PAGE 3   
+
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
